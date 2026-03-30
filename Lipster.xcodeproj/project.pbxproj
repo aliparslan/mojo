@@ -33,6 +33,7 @@
 		A10000000000000000000015 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000016 /* LiveActivityManager.swift */; };
 		A10000000000000000000016 /* FlipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000017 /* FlipView.swift */; };
 		C919416CAF3D77C4D901EDF2 /* FlipBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 279F4877B8A384205389FF7D /* FlipBrowserView.swift */; };
+		D20000000000000000000001 /* SystemVolumeSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000018 /* SystemVolumeSlider.swift */; };
 		FB264C988B32902BD2D59224 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 239542B983BE80233818208A /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
@@ -65,6 +66,7 @@
 		B10000000000000000000015 /* ColorExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorExtractor.swift; sourceTree = "<group>"; };
 		B10000000000000000000016 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
 		B10000000000000000000017 /* FlipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlipView.swift; sourceTree = "<group>"; };
+		B10000000000000000000018 /* SystemVolumeSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemVolumeSlider.swift; sourceTree = "<group>"; };
 		C10000000000000000000001 /* Lipster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lipster.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -172,6 +174,7 @@
 				B1000000000000000000000F /* NowPlayingView.swift */,
 				B10000000000000000000010 /* MiniPlayerView.swift */,
 				B10000000000000000000014 /* QueueView.swift */,
+				B10000000000000000000018 /* SystemVolumeSlider.swift */,
 			);
 			path = NowPlaying;
 			sourceTree = "<group>";
@@ -305,6 +308,7 @@
 				FB264C988B32902BD2D59224 /* SettingsView.swift in Sources */,
 				971A48849A4F4CF7DCE12189 /* LikedSongsView.swift in Sources */,
 				C919416CAF3D77C4D901EDF2 /* FlipBrowserView.swift in Sources */,
+				D20000000000000000000001 /* SystemVolumeSlider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -435,9 +439,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = KV876H8952;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Lipster/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Lipster;
@@ -453,6 +458,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.alip.lipster;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -464,9 +470,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = KV876H8952;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Lipster/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Lipster;
@@ -482,6 +489,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.alip.lipster;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
