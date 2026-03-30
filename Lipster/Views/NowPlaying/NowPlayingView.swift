@@ -6,10 +6,8 @@ struct NowPlayingView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var sliderValue: Double = 0
     @State private var isDragging: Bool = false
-    @State private var showQueue: Bool = false
     @State private var artScale: CGFloat = 1.0
-    @State private var artSwipeOffset: CGFloat = 0
-    @State private var skipDirection: Edge = .trailing
+    @State private var showQueue: Bool = false
 
     private var colors: AlbumColors {
         appState.albumColors
@@ -20,39 +18,48 @@ struct NowPlayingView: View {
             ambientBackground
 
             VStack(spacing: 0) {
-                Spacer().frame(height: 16)
+                // Drag handle
+                Capsule()
+                    .fill(.white.opacity(0.4))
+                    .frame(width: 36, height: 5)
+                    .padding(.top, 12)
+                    .padding(.bottom, 24)
 
-                // Album art — swipeable
+                Spacer()
+
+                // Album art
                 albumArt
                     .padding(.horizontal, 28)
 
-                Spacer().frame(minHeight: 24, maxHeight: 36)
+                Spacer().frame(height: 36)
 
-                // Song info, scrubber, transport, volume, bottom
-                VStack(spacing: 0) {
-                    songInfoRow
-                        .padding(.horizontal, 28)
+                songInfo
 
-                    progressScrubber
-                        .padding(.horizontal, 28)
-                        .padding(.top, 20)
+                Spacer().frame(height: 28)
 
-                    transportControls
-                        .padding(.top, 18)
+                progressScrubber
+                    .padding(.horizontal, 28)
 
-                    volumeSlider
-                        .padding(.horizontal, 28)
-                        .padding(.top, 14)
+                Spacer().frame(height: 20)
 
-                    bottomControls
-                        .padding(.horizontal, 48)
-                        .padding(.top, 20)
-                        .padding(.bottom, 16)
-                }
+                transportControls
+
+                VolumeSliderView()
+                    .frame(height: 34)
+                    .padding(.horizontal, 32)
+                    .padding(.top, 8)
+
+                Spacer().frame(height: 16)
+
+                bottomControls
+
+                Spacer().frame(height: 20)
             }
         }
+        .presentationDragIndicator(.hidden)
         .preferredColorScheme(.dark)
         .onAppear {
+            // Sync slider to current playback position to prevent jump
             sliderValue = appState.currentTime
             artScale = appState.isPlaying ? 1.0 : 0.85
         }
@@ -62,10 +69,11 @@ struct NowPlayingView: View {
             }
         }
         .onChange(of: appState.currentSong) { _, _ in
+            // Reset slider when song changes
             sliderValue = 0
         }
         .onChange(of: appState.isPlaying) { _, playing in
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+            withAnimation(.easeInOut(duration: 0.4)) {
                 artScale = playing ? 1.0 : 0.85
             }
         }
@@ -99,7 +107,7 @@ struct NowPlayingView: View {
                 endRadius: 400
             )
 
-            Color.black.opacity(0.3)
+            Color.black.opacity(0.15)
         }
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 1.0), value: colors)
@@ -112,14 +120,9 @@ struct NowPlayingView: View {
             if let song = appState.currentSong, let uiImage = song.coverArtImage {
                 Image(uiImage: uiImage)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .aspectRatio(contentMode: .fill)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .shadow(color: colors.primary.opacity(0.4), radius: 30, y: 15)
-                    .id(song.id)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: skipDirection).combined(with: .opacity),
-                        removal: .move(edge: skipDirection == .trailing ? .leading : .trailing).combined(with: .opacity)
-                    ))
+                    .shadow(color: .black.opacity(0.5), radius: 30, y: 15)
             } else {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(.ultraThinMaterial)
@@ -132,108 +135,34 @@ struct NowPlayingView: View {
                     .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
             }
         }
+        .aspectRatio(1, contentMode: .fit)
         .scaleEffect(artScale)
-        .animation(.spring(response: 0.45, dampingFraction: 0.75), value: artScale)
-        .offset(x: artSwipeOffset)
-        .gesture(
-            DragGesture(minimumDistance: 30)
-                .onChanged { value in
-                    if abs(value.translation.width) > abs(value.translation.height) {
-                        artSwipeOffset = value.translation.width
-                    }
-                }
-                .onEnded { value in
-                    let threshold: CGFloat = 80
-                    if value.translation.width < -threshold || value.predictedEndTranslation.width < -200 {
-                        Haptics.impact(.medium)
-                        skipDirection = .trailing
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            artSwipeOffset = 0
-                        }
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            appState.skipNext()
-                        }
-                    } else if value.translation.width > threshold || value.predictedEndTranslation.width > 200 {
-                        Haptics.impact(.medium)
-                        skipDirection = .leading
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            artSwipeOffset = 0
-                        }
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            appState.skipPrevious()
-                        }
-                    } else {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            artSwipeOffset = 0
-                        }
-                    }
-                }
-        )
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: artScale)
     }
 
-    // MARK: - Song Info Row
+    // MARK: - Song Info
 
-    private var songInfoRow: some View {
-        HStack(alignment: .center, spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(appState.currentSong?.title ?? "Not Playing")
-                    .font(.title3)
-                    .fontWeight(.bold)
+    private var songInfo: some View {
+        VStack(spacing: 6) {
+            Text(appState.currentSong?.title ?? "Not Playing")
+                .font(.title2)
+                .fontWeight(.bold)
+                .lineLimit(1)
+                .foregroundStyle(.white)
+
+            Text(appState.currentSong?.artist ?? "")
+                .font(.body)
+                .foregroundStyle(.white.opacity(0.7))
+                .lineLimit(1)
+
+            if let album = appState.currentSong?.album {
+                Text(album)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)
-                    .foregroundStyle(.white)
-
-                Text(appState.currentSong?.artist ?? "")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.55))
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 12)
-
-            HStack(spacing: 10) {
-                // Star / favorite button
-                Button {
-                    Haptics.impact(.light)
-                    if let song = appState.currentSong {
-                        appState.databaseManager.toggleLike(songId: song.id)
-                    }
-                } label: {
-                    Image(systemName: isCurrentSongLiked ? "star.fill" : "star")
-                        .font(.title3)
-                        .foregroundStyle(isCurrentSongLiked ? .yellow : .white.opacity(0.5))
-                        .frame(width: 36, height: 36)
-                        .contentTransition(.symbolEffect(.replace))
-                }
-
-                // Context menu
-                Menu {
-                    Button { } label: {
-                        Label("Add to Playlist", systemImage: "text.badge.plus")
-                    }
-                    Button { } label: {
-                        Label("Share Song", systemImage: "square.and.arrow.up")
-                    }
-                    Divider()
-                    Button { } label: {
-                        Label("Go to Album", systemImage: "square.stack")
-                    }
-                    Button { } label: {
-                        Label("Go to Artist", systemImage: "person")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.body)
-                        .foregroundStyle(.white.opacity(0.5))
-                        .frame(width: 36, height: 36)
-                        .background(.white.opacity(0.1), in: Circle())
-                }
             }
         }
-    }
-
-    private var isCurrentSongLiked: Bool {
-        guard let song = appState.currentSong else { return false }
-        return appState.databaseManager.isLiked(songId: song.id)
+        .padding(.horizontal, 28)
     }
 
     // MARK: - Progress Scrubber
@@ -242,31 +171,26 @@ struct NowPlayingView: View {
         VStack(spacing: 6) {
             Slider(
                 value: $sliderValue,
-                in: 0...max(appState.duration, 1)
-            ) {
-                Text("Progress")
-            } onEditingChanged: { editing in
-                isDragging = editing
-                if editing {
-                    Haptics.selection()
-                } else {
-                    Haptics.selection()
-                    appState.audioPlayer.seek(to: sliderValue)
-                    appState.currentTime = sliderValue
+                in: 0...max(appState.duration, 1),
+                onEditingChanged: { editing in
+                    isDragging = editing
+                    if !editing {
+                        appState.audioPlayer.seek(to: sliderValue)
+                        appState.currentTime = sliderValue
+                    }
                 }
-            }
-            .sliderThumbVisibility(.hidden)
-            .tint(colors.primary)
+            )
+            .tint(.white)
 
             HStack {
                 Text(formatTime(isDragging ? sliderValue : appState.currentTime))
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.white.opacity(0.6))
                     .monospacedDigit()
                 Spacer()
                 Text("-\(formatTime(max(0, appState.duration - (isDragging ? sliderValue : appState.currentTime))))")
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.white.opacity(0.6))
                     .monospacedDigit()
             }
         }
@@ -275,68 +199,52 @@ struct NowPlayingView: View {
     // MARK: - Transport Controls
 
     private var transportControls: some View {
-        HStack {
-            Spacer()
+        HStack(spacing: 36) {
+            Button {
+                Haptics.impact(.light)
+                appState.shuffleEnabled.toggle()
+            } label: {
+                Image(systemName: "shuffle")
+                    .font(.title3)
+                    .foregroundStyle(appState.shuffleEnabled ? .white : .white.opacity(0.35))
+            }
 
             Button {
                 Haptics.impact(.medium)
-                skipDirection = .leading
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    appState.skipPrevious()
-                }
+                appState.skipPrevious()
             } label: {
                 Image(systemName: "backward.fill")
-                    .font(.system(size: 36))
+                    .font(.title)
                     .foregroundStyle(.white)
-                    .frame(width: 72, height: 56)
             }
-
-            Spacer()
 
             Button {
                 Haptics.impact(.medium)
                 appState.togglePlayPause()
             } label: {
-                Image(systemName: appState.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 48))
+                Image(systemName: appState.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                    .font(.system(size: 64))
                     .foregroundStyle(.white)
-                    .frame(width: 80, height: 64)
                     .contentTransition(.symbolEffect(.replace))
             }
 
-            Spacer()
-
             Button {
                 Haptics.impact(.medium)
-                skipDirection = .trailing
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    appState.skipNext()
-                }
+                appState.skipNext()
             } label: {
                 Image(systemName: "forward.fill")
-                    .font(.system(size: 36))
+                    .font(.title)
                     .foregroundStyle(.white)
-                    .frame(width: 72, height: 56)
             }
 
-            Spacer()
-        }
-    }
-
-    // MARK: - Volume Slider
-
-    private var volumeSlider: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "speaker.fill")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.35))
-
-            SystemVolumeSlider()
-                .frame(height: 34)
-
-            Image(systemName: "speaker.wave.3.fill")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.35))
+            Button {
+                Haptics.impact(.light)
+                appState.repeatMode = appState.repeatMode.next
+            } label: {
+                Image(systemName: appState.repeatMode.systemImage)
+                    .font(.title3)
+                    .foregroundStyle(appState.repeatMode == .off ? .white.opacity(0.35) : .white)
+            }
         }
     }
 
@@ -344,20 +252,18 @@ struct NowPlayingView: View {
 
     private var bottomControls: some View {
         HStack {
-            Button { } label: {
-                Image(systemName: "quote.bubble")
-                    .font(.body)
-                    .foregroundStyle(.white.opacity(0.5))
-                    .frame(width: 44, height: 44)
-            }
-
-            Spacer()
-
-            Button { } label: {
-                Image(systemName: "airplayaudio")
-                    .font(.body)
-                    .foregroundStyle(.white.opacity(0.5))
-                    .frame(width: 44, height: 44)
+            Menu {
+                Button("15 minutes") { appState.setSleepTimer(minutes: 15) }
+                Button("30 minutes") { appState.setSleepTimer(minutes: 30) }
+                Button("45 minutes") { appState.setSleepTimer(minutes: 45) }
+                Button("60 minutes") { appState.setSleepTimer(minutes: 60) }
+                if appState.sleepTimerMinutes != nil {
+                    Button("Cancel Timer", role: .destructive) { appState.cancelSleepTimer() }
+                }
+            } label: {
+                Image(systemName: appState.sleepTimerMinutes != nil ? "moon.fill" : "moon.zzz")
+                    .font(.title3)
+                    .foregroundStyle(appState.sleepTimerMinutes != nil ? .white : .white.opacity(0.35))
             }
 
             Spacer()
@@ -366,11 +272,11 @@ struct NowPlayingView: View {
                 showQueue = true
             } label: {
                 Image(systemName: "list.bullet")
-                    .font(.body)
-                    .foregroundStyle(.white.opacity(0.5))
-                    .frame(width: 44, height: 44)
+                    .font(.title3)
+                    .foregroundStyle(.white.opacity(0.6))
             }
         }
+        .padding(.horizontal, 28)
     }
 
     // MARK: - Helpers
@@ -381,6 +287,16 @@ struct NowPlayingView: View {
         let seconds = totalSeconds % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
+}
+
+private struct VolumeSliderView: UIViewRepresentable {
+    func makeUIView(context: Context) -> MPVolumeView {
+        let view = MPVolumeView(frame: .zero)
+        view.showsRouteButton = true
+        view.tintColor = .white
+        return view
+    }
+    func updateUIView(_ uiView: MPVolumeView, context: Context) {}
 }
 
 #Preview {
