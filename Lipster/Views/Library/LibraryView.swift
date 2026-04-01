@@ -66,32 +66,39 @@ struct LibraryView: View {
                     )
                 } else {
                     VStack(spacing: 0) {
-                        Spacer().frame(height: 12)
-
                         categoryBar
+                            .padding(.top, 12)
                             .padding(.bottom, 8)
 
-                        FlipView(
-                            items: flipItems,
-                            centeredIndex: $centeredIndex
-                        ) { index in
-                            handleItemTap(at: index)
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                FlipView(
+                                    items: flipItems,
+                                    centeredIndex: $centeredIndex
+                                ) { index in
+                                    handleItemTap(at: index)
+                                }
+                                .frame(height: 250)
+                                .clipped()
+                                .id(selectedCategory)
+
+                                centeredItemInfo
+                                    .padding(.top, -8)
+                                    .padding(.bottom, 8)
+
+                                Rectangle()
+                                    .fill(.white.opacity(0.15))
+                                    .frame(height: 0.5)
+
+                                playShuffleRow
+
+                                contentBelowCarousel
+
+                                // Bottom padding so mini player doesn't cover last items
+                                Spacer().frame(height: 20)
+                            }
                         }
-                        .frame(height: 250)
-                        .clipped()
-                        .id(selectedCategory)
-
-                        centeredItemInfo
-                            .padding(.top, -8)
-                            .padding(.bottom, 8)
-
-                        Rectangle()
-                            .fill(.white.opacity(0.15))
-                            .frame(height: 0.5)
-
-                        playShuffleRow
-
-                        contentBelowCarousel
+                        .scrollIndicators(.hidden)
                     }
                 }
             }
@@ -141,26 +148,19 @@ struct LibraryView: View {
                 selectedCategory = category
             }
         } label: {
-            HStack(spacing: 5) {
-                if isSelected {
-                    Image(systemName: category.icon)
-                        .font(.caption)
-                        .fontWeight(.semibold)
+            Text(category.rawValue)
+                .font(.subheadline)
+                .fontWeight(isSelected ? .semibold : .medium)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .foregroundStyle(isSelected ? .white : .white.opacity(0.4))
+                .background {
+                    if isSelected {
+                        Capsule()
+                            .fill(.white.opacity(0.15))
+                            .matchedGeometryEffect(id: "category_indicator", in: namespace)
+                    }
                 }
-                Text(category.rawValue)
-                    .font(.subheadline)
-                    .fontWeight(isSelected ? .semibold : .medium)
-            }
-            .padding(.horizontal, isSelected ? 14 : 10)
-            .padding(.vertical, 8)
-            .foregroundStyle(isSelected ? .white : .white.opacity(0.5))
-            .background {
-                if isSelected {
-                    Capsule()
-                        .fill(.white.opacity(0.15))
-                        .matchedGeometryEffect(id: "category_indicator", in: namespace)
-                }
-            }
         }
         .buttonStyle(.plain)
     }
@@ -272,14 +272,12 @@ struct LibraryView: View {
     // MARK: - Album Track List
 
     private var albumTrackList: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(tracks) { song in
-                    trackRow(song: song, queue: tracks)
+        LazyVStack(spacing: 0) {
+            ForEach(tracks) { song in
+                trackRow(song: song, queue: tracks)
 
-                    if song.id != tracks.last?.id {
-                        Divider().background(.white.opacity(0.1)).padding(.leading, 50)
-                    }
+                if song.id != tracks.last?.id {
+                    Divider().background(.white.opacity(0.1)).padding(.leading, 50)
                 }
             }
         }
@@ -288,39 +286,43 @@ struct LibraryView: View {
     // MARK: - Artist Grouped List
 
     private var artistGroupedList: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(artistAlbumGroups, id: \.album.id) { group in
-                    // Album header
-                    HStack(spacing: 10) {
-                        if let image = group.album.coverArtImage {
-                            Image(uiImage: image)
-                                .resizable()
-                                .frame(width: 40, height: 40)
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(group.album.name)
-                                .font(.subheadline).fontWeight(.semibold).foregroundStyle(.white)
-                            if let year = group.album.year {
-                                Text(String(year))
-                                    .font(.caption2).foregroundStyle(.white.opacity(0.4))
-                            }
-                        }
-                        Spacer()
+        LazyVStack(spacing: 0) {
+            ForEach(artistAlbumGroups, id: \.album.id) { group in
+                // Album section header
+                HStack(spacing: 10) {
+                    if let image = group.album.coverArtImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .frame(width: 40, height: 40)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(.white.opacity(0.04))
-
-                    // Tracks under this album
-                    ForEach(group.songs) { song in
-                        trackRow(song: song, queue: allCurrentTracks)
-
-                        if song.id != group.songs.last?.id {
-                            Divider().background(.white.opacity(0.1)).padding(.leading, 50)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(group.album.name)
+                            .font(.subheadline).fontWeight(.semibold).foregroundStyle(.white)
+                        if let year = group.album.year {
+                            Text(String(year))
+                                .font(.caption2).foregroundStyle(.white.opacity(0.4))
                         }
                     }
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.white.opacity(0.06))
+
+                // Tracks under this album
+                ForEach(group.songs) { song in
+                    trackRow(song: song, queue: group.songs)
+
+                    if song.id != group.songs.last?.id {
+                        Divider().background(.white.opacity(0.1)).padding(.leading, 50)
+                    }
+                }
+
+                // Separator between album groups
+                if group.album.id != artistAlbumGroups.last?.album.id {
+                    Spacer().frame(height: 12)
                 }
             }
         }
@@ -329,14 +331,12 @@ struct LibraryView: View {
     // MARK: - Playlist Track List
 
     private var playlistTrackList: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(tracks) { song in
-                    trackRow(song: song, queue: tracks)
+        LazyVStack(spacing: 0) {
+            ForEach(tracks) { song in
+                trackRow(song: song, queue: tracks)
 
-                    if song.id != tracks.last?.id {
-                        Divider().background(.white.opacity(0.1)).padding(.leading, 50)
-                    }
+                if song.id != tracks.last?.id {
+                    Divider().background(.white.opacity(0.1)).padding(.leading, 50)
                 }
             }
         }
@@ -439,8 +439,10 @@ struct LibraryView: View {
         case .artists:
             guard artistItems.indices.contains(centeredIndex) else { artistAlbumGroups = []; return }
             let artistName = artistItems[centeredIndex].name
-            let artistAlbums = albums.filter { $0.artist == artistName }
+            // Match albums where the album artist matches (not individual song artists)
+            let artistAlbums = albums.filter { $0.artist.localizedCaseInsensitiveCompare(artistName) == .orderedSame }
             artistAlbumGroups = artistAlbums.map { album in
+                // Only load songs that belong to this album — loadSongsForAlbum already handles this correctly
                 let songs = appState.databaseManager.loadSongsForAlbum(albumId: album.id)
                 return (album: album, songs: songs)
             }

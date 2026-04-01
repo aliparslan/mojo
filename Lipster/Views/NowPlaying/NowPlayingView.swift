@@ -19,36 +19,39 @@ struct NowPlayingView: View {
             AmbientBackgroundView(colors: colors, image: appState.currentSong?.coverArtImage, overlayOpacity: 0.3)
                 .animation(.easeInOut(duration: 1.0), value: colors)
 
-            VStack(spacing: 0) {
-                Spacer().frame(height: 36)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    Spacer().frame(height: 24)
 
-                albumArtWithReflection
-                    .padding(.horizontal, 28)
+                    albumArtWithReflection
+                        .padding(.horizontal, 40)
 
-                Spacer().frame(height: 28)
+                    Spacer().frame(height: 20)
 
-                songInfo
+                    songInfo
 
-                Spacer().frame(height: 24)
+                    Spacer().frame(height: 20)
 
-                progressScrubber
-                    .padding(.horizontal, 28)
+                    progressScrubber
+                        .padding(.horizontal, 28)
 
-                Spacer().frame(height: 20)
+                    Spacer().frame(height: 16)
 
-                transportControls
+                    transportControls
 
-                VolumeSliderView()
-                    .frame(height: 34)
-                    .padding(.horizontal, 32)
-                    .padding(.top, 8)
+                    VolumeSliderView()
+                        .frame(height: 34)
+                        .padding(.horizontal, 32)
+                        .padding(.top, 8)
 
-                Spacer().frame(height: 16)
+                    Spacer().frame(height: 12)
 
-                bottomControls
+                    bottomControls
 
-                Spacer().frame(height: 20)
+                    Spacer().frame(height: 16)
+                }
             }
+            .scrollBounceBehavior(.basedOnSize)
         }
         .presentationDragIndicator(.visible)
         .preferredColorScheme(.dark)
