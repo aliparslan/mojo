@@ -20,12 +20,12 @@ struct NowPlayingView: View {
                 .animation(.easeInOut(duration: 1.0), value: colors)
 
             VStack(spacing: 0) {
-                Spacer().frame(height: 20)
+                Spacer().frame(height: 16)
 
                 albumArtWithReflection
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, 36)
 
-                Spacer().frame(height: 16)
+                Spacer().frame(height: 20)
 
                 songInfo
 
@@ -46,9 +46,9 @@ struct NowPlayingView: View {
                 Spacer()
 
                 bottomControls
-
-                Spacer().frame(height: 12)
+                    .padding(.bottom, 12)
             }
+            .frame(maxWidth: .infinity)
         }
         .presentationDragIndicator(.visible)
         .preferredColorScheme(.dark)
@@ -75,54 +75,61 @@ struct NowPlayingView: View {
 
     // MARK: - Album Art with Reflection
 
+    private func albumArtImage(_ uiImage: UIImage, size: CGFloat) -> some View {
+        Image(uiImage: uiImage)
+            .resizable()
+            .scaledToFill()
+            .frame(width: size, height: size)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
     private var albumArtWithReflection: some View {
-        VStack(spacing: 0) {
-            Group {
+        GeometryReader { geo in
+            let artSize = geo.size.width
+            VStack(spacing: 0) {
+                // Main album art
+                Group {
+                    if let song = appState.currentSong, let uiImage = song.coverArtImage {
+                        albumArtImage(uiImage, size: artSize)
+                            .shadow(color: colors.primary.opacity(0.4), radius: 30, y: 15)
+                    } else {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(.ultraThinMaterial)
+                            .frame(width: artSize, height: artSize)
+                            .overlay {
+                                Image(systemName: "music.note")
+                                    .font(.system(size: 60))
+                                    .foregroundStyle(.white.opacity(0.4))
+                            }
+                            .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+                    }
+                }
+                .scaleEffect(artScale)
+                .offset(x: artOffset)
+                .gesture(artSwipeGesture)
+                .animation(.spring(response: 0.5, dampingFraction: 0.7), value: artScale)
+
+                // Reflection
                 if let song = appState.currentSong, let uiImage = song.coverArtImage {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .shadow(color: colors.primary.opacity(0.4), radius: 30, y: 15)
-                } else {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(.ultraThinMaterial)
-                        .aspectRatio(1, contentMode: .fit)
-                        .overlay {
-                            Image(systemName: "music.note")
-                                .font(.system(size: 60))
-                                .foregroundStyle(.white.opacity(0.4))
-                        }
-                        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+                    albumArtImage(uiImage, size: artSize)
+                        .scaleEffect(x: 1, y: -1)
+                        .frame(height: 50)
+                        .clipped()
+                        .mask(
+                            LinearGradient(
+                                colors: [.white.opacity(0.3), .clear],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .opacity(0.3)
+                        .scaleEffect(artScale)
+                        .offset(x: artOffset)
                 }
             }
-            .aspectRatio(1, contentMode: .fit)
-            .scaleEffect(artScale)
-            .offset(x: artOffset)
-            .gesture(artSwipeGesture)
-            .animation(.spring(response: 0.5, dampingFraction: 0.7), value: artScale)
-
-            // Reflection
-            if let song = appState.currentSong, let uiImage = song.coverArtImage {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .scaleEffect(x: 1, y: -1)
-                    .frame(height: 60)
-                    .clipped()
-                    .mask(
-                        LinearGradient(
-                            colors: [.white.opacity(0.3), .clear],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .opacity(0.3)
-                    .scaleEffect(artScale)
-                    .offset(x: artOffset)
-            }
         }
+        .aspectRatio(1, contentMode: .fit)
     }
 
     // MARK: - Art Swipe Gesture
