@@ -3,26 +3,31 @@ import SwiftUI
 @main
 struct LipsterApp: App {
     @State private var appState = AppState()
+    @State private var selectedSection: AppSection = .library
     @State private var showNowPlaying = false
+    @State private var showSettings = false
 
     var body: some Scene {
         WindowGroup {
-            TabView {
-                LibraryView()
-                    .safeAreaInset(edge: .bottom) { miniPlayer }
-                    .tabItem { Label("Library", systemImage: "music.note.house") }
+            TabView(selection: $selectedSection) {
+                DiscoverView()
+                    .tag(AppSection.discover)
 
-                FlipBrowserView()
-                    .safeAreaInset(edge: .bottom) { miniPlayer }
-                    .tabItem { Label("Flip", systemImage: "rectangle.stack") }
+                LibraryView()
+                    .tag(AppSection.library)
 
                 SearchView()
-                    .safeAreaInset(edge: .bottom) { miniPlayer }
-                    .tabItem { Label("Search", systemImage: "magnifyingglass") }
-
-                SettingsView()
-                    .safeAreaInset(edge: .bottom) { miniPlayer }
-                    .tabItem { Label("Settings", systemImage: "gear") }
+                    .tag(AppSection.search)
+            }
+            .toolbar(.hidden, for: .tabBar)
+            .safeAreaInset(edge: .bottom) {
+                BottomBarView(
+                    selectedSection: $selectedSection,
+                    showNowPlaying: $showNowPlaying
+                )
+            }
+            .overlay(alignment: .topTrailing) {
+                gearButton
             }
             .environment(appState)
             .preferredColorScheme(.dark)
@@ -31,14 +36,27 @@ struct LipsterApp: App {
                     .environment(appState)
                     .interactiveDismissDisabled(false)
             }
+            .sheet(isPresented: $showSettings) {
+                NavigationStack {
+                    SettingsView()
+                }
+                .environment(appState)
+                .preferredColorScheme(.dark)
+            }
         }
     }
 
-    @ViewBuilder
-    private var miniPlayer: some View {
-        if appState.currentSong != nil {
-            MiniPlayerView(showNowPlaying: $showNowPlaying)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+    private var gearButton: some View {
+        Button {
+            showSettings = true
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.body)
+                .foregroundStyle(.white.opacity(0.6))
+                .padding(10)
+                .background(.ultraThinMaterial, in: Circle())
         }
+        .padding(.trailing, 16)
+        .padding(.top, 4)
     }
 }
