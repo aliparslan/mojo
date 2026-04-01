@@ -15,32 +15,41 @@ struct NowPlayingView: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 32)
+
             // Album art
             artSection
                 .padding(.horizontal, 36)
-                .padding(.top, 16)
+
+            Spacer().frame(height: 24)
 
             // Song info
             songInfo
+
+            Spacer().frame(height: 20)
 
             // Progress scrubber
             progressScrubber
                 .padding(.horizontal, 28)
 
+            Spacer().frame(height: 20)
+
             // Transport controls
             transportControls
+
+            Spacer().frame(height: 16)
 
             // Volume
             VolumeSliderView()
                 .frame(height: 34)
                 .padding(.horizontal, 32)
 
-            Spacer(minLength: 0)
+            Spacer()
 
             // Bottom controls
             bottomControls
-                .padding(.bottom, 8)
+                .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
