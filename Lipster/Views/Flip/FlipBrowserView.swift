@@ -27,10 +27,11 @@ struct FlipBrowserView: View {
 
                         // Flip carousel
                         FlipView(
-                            albums: albums,
+                            items: albums.map { FlipItem(id: "album-\($0.id)", coverArtFilePath: $0.coverArtFilePath) },
                             centeredIndex: $centeredAlbumIndex
-                        ) { album in
-                            selectedAlbum = album
+                        ) { index in
+                            guard albums.indices.contains(index) else { return }
+                            selectedAlbum = albums[index]
                         }
                         .frame(height: 250)
                         .clipped()
@@ -210,41 +211,12 @@ struct FlipBrowserView: View {
     // MARK: - PS3-Inspired Background
 
     private var ps3Background: some View {
-        ZStack {
-            Color.black
-
-            if let album = centeredAlbum,
-               let image = album.coverArtImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .blur(radius: 80)
-                    .opacity(0.2)
-                    .scaleEffect(1.5)
-                    .clipped()
-                    .id(centeredAlbumIndex)
-                    .transition(.opacity)
-            }
-
-            LinearGradient(
-                colors: [
-                    albumColors.primary.opacity(0.25),
-                    .clear,
-                    albumColors.secondary.opacity(0.15),
-                    .clear,
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            RadialGradient(
-                colors: [albumColors.primary.opacity(0.12), .clear],
-                center: .init(x: 0.5, y: 0.3),
-                startRadius: 10,
-                endRadius: 350
-            )
-        }
-        .ignoresSafeArea()
+        AmbientBackgroundView(
+            colors: albumColors,
+            image: centeredAlbum?.coverArtImage
+        )
+        .id(centeredAlbumIndex)
+        .transition(.opacity)
         .animation(.easeInOut(duration: 0.5), value: centeredAlbumIndex)
     }
 }

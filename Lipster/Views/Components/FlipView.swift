@@ -1,12 +1,19 @@
 import SwiftUI
 import UIKit
 
+// MARK: - FlipItem
+
+struct FlipItem: Identifiable, Equatable {
+    let id: String
+    let coverArtFilePath: String?
+}
+
 // MARK: - SwiftUI Bridge
 
 struct FlipView: UIViewRepresentable {
-    let albums: [Album]
+    let items: [FlipItem]
     var centeredIndex: Binding<Int>?
-    let onAlbumTapped: (Album) -> Void
+    let onItemTapped: (Int) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -15,18 +22,17 @@ struct FlipView: UIViewRepresentable {
     func makeUIView(context: Context) -> FlipUIView {
         let view = FlipUIView()
         view.delegate = context.coordinator
-        view.setAlbums(albums)
+        view.setItems(items)
         return view
     }
 
     func updateUIView(_ uiView: FlipUIView, context: Context) {
         context.coordinator.parent = self
-        if uiView.albums != albums {
-            uiView.setAlbums(albums)
+        if uiView.items != items {
+            uiView.setItems(items)
         }
-        // Sync programmatic index changes from SwiftUI → UIKit
         if let index = centeredIndex?.wrappedValue, index != uiView.currentIndex,
-           albums.indices.contains(index) {
+           items.indices.contains(index) {
             uiView.scrollToIndex(index, animated: true)
         }
     }
@@ -43,8 +49,8 @@ struct FlipView: UIViewRepresentable {
         }
 
         func flipDidTapCenter(atIndex index: Int) {
-            guard parent.albums.indices.contains(index) else { return }
-            parent.onAlbumTapped(parent.albums[index])
+            guard parent.items.indices.contains(index) else { return }
+            parent.onItemTapped(index)
         }
     }
 }
@@ -58,7 +64,7 @@ protocol FlipUIViewDelegate: AnyObject {
 
 class FlipUIView: UIView {
     weak var delegate: FlipUIViewDelegate?
-    private(set) var albums: [Album] = []
+    private(set) var items: [FlipItem] = []
 
     private let scrollView = UIScrollView()
     private var coverViews: [CoverItemView] = []
@@ -114,30 +120,30 @@ class FlipUIView: UIView {
         updateContentSize()
         updateTransforms()
 
-        if !hasPerformedInitialLayout && !albums.isEmpty && bounds.width > 0 {
+        if !hasPerformedInitialLayout && !items.isEmpty && bounds.width > 0 {
             hasPerformedInitialLayout = true
             scrollToIndex(0, animated: false)
         }
     }
 
-    func setAlbums(_ albums: [Album]) {
-        self.albums = albums
+    func setItems(_ items: [FlipItem]) {
+        self.items = items
         coverViews.forEach { $0.removeFromSuperview() }
         coverViews.removeAll()
 
-        for (index, album) in albums.enumerated() {
+        for (index, item) in items.enumerated() {
             let itemView = CoverItemView(size: coverSize)
             scrollView.addSubview(itemView)
             coverViews.append(itemView)
-            loadImage(for: album, index: index)
+            loadImage(for: item, index: index)
         }
 
         updateContentSize()
         setNeedsLayout()
     }
 
-    private func loadImage(for album: Album, index: Int) {
-        guard let path = album.coverArtFilePath else { return }
+    private func loadImage(for item: FlipItem, index: Int) {
+        guard let path = item.coverArtFilePath else { return }
         let scale = window?.screen.scale ?? 3.0
         let targetPixels = coverSize * scale
 
@@ -168,8 +174,8 @@ class FlipUIView: UIView {
     }
 
     private func updateContentSize() {
-        guard !albums.isEmpty, scrollView.bounds.width > 0 else { return }
-        let totalWidth = CGFloat(albums.count - 1) * itemSlotWidth + coverSize
+        guard !items.isEmpty, scrollView.bounds.width > 0 else { return }
+        let totalWidth = CGFloat(items.count - 1) * itemSlotWidth + coverSize
         let inset = (scrollView.bounds.width - coverSize) / 2
         scrollView.contentSize = CGSize(width: totalWidth, height: scrollView.bounds.height)
         scrollView.contentInset = UIEdgeInsets(top: 0, left: inset, bottom: 0, right: inset)
@@ -231,7 +237,7 @@ class FlipUIView: UIView {
         let viewCenter = scrollView.contentOffset.x + scrollView.bounds.width / 2
         var bestIndex = 0
         var bestDist = CGFloat.greatestFiniteMagnitude
-        for i in albums.indices {
+        for i in items.indices {
             let d = abs(centerX(forIndex: i) - viewCenter)
             if d < bestDist { bestDist = d; bestIndex = i }
         }
@@ -249,14 +255,13 @@ class FlipUIView: UIView {
 
     @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
         let loc = gesture.location(in: scrollView)
-        let viewCenter = scrollView.contentOffset.x + scrollView.bounds.width / 2
         let centerItemX = centerX(forIndex: currentIndex)
 
         if abs(loc.x - centerItemX) < coverSize / 2 && loc.y < coverSize {
             delegate?.flipDidTapCenter(atIndex: currentIndex)
         } else {
             // Tap on a side item: find which one and scroll to it
-            for i in albums.indices {
+            for i in items.indices {
                 let frame = coverViews[i].frame
                 if frame.contains(loc) {
                     scrollToIndex(i, animated: true)
@@ -275,7 +280,7 @@ extension FlipUIView: UIScrollViewDelegate {
         let viewCenter = scrollView.contentOffset.x + scrollView.bounds.width / 2
         var bestIndex = 0
         var bestDist = CGFloat.greatestFiniteMagnitude
-        for i in albums.indices {
+        for i in items.indices {
             let d = abs(centerX(forIndex: i) - viewCenter)
             if d < bestDist { bestDist = d; bestIndex = i }
         }
@@ -370,6 +375,6 @@ private class CoverItemView: UIView {
 }
 
 #Preview {
-    FlipView(albums: []) { _ in }
+    FlipView(items: []) { _ in }
         .preferredColorScheme(.dark)
 }
