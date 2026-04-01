@@ -36,22 +36,15 @@ struct LibraryView: View {
     @State private var albumColors: AlbumColors = .placeholder
     @State private var tracks: [Song] = []
     @State private var artistAlbumGroups: [(album: Album, songs: [Song])] = []
+    @State private var cachedFlipItems: [FlipItem] = []
+    @State private var updateTask: Task<Void, Never>?
 
     // Navigation
     @State private var selectedAlbum: Album?
 
     // MARK: - Carousel Items
 
-    private var flipItems: [FlipItem] {
-        switch selectedCategory {
-        case .albums:
-            albums.map { FlipItem(id: "album-\($0.id)", coverArtFilePath: $0.coverArtFilePath) }
-        case .artists:
-            artistItems.map { FlipItem(id: "artist-\($0.name)", coverArtFilePath: $0.coverArtFilePath) }
-        case .playlists:
-            playlists.map { FlipItem(id: "playlist-\($0.id)", coverArtFilePath: $0.coverArtFilePath) }
-        }
-    }
+    private var flipItems: [FlipItem] { cachedFlipItems }
 
     // MARK: - Body
 
@@ -109,10 +102,11 @@ struct LibraryView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .task { loadAllData() }
-            .onChange(of: centeredIndex) { _, _ in updateCenteredState() }
+            .onChange(of: centeredIndex) { _, _ in debouncedUpdate() }
             .onChange(of: selectedCategory) { _, _ in
                 centeredIndex = 0
-                updateCenteredState()
+                rebuildFlipItems()
+                debouncedUpdate()
             }
             .navigationDestination(item: $selectedAlbum) { album in
                 AlbumDetailView(album: album)
@@ -426,7 +420,51 @@ struct LibraryView: View {
 
         playlists = appState.databaseManager.loadPlaylists()
 
+        rebuildFlipItems()
         updateCenteredState()
+    }
+
+    private func rebuildFlipItems() {
+        switch selectedCategory {
+        case .albums:
+            cachedFlipItems = albums.map { FlipItem(id: "album-\($0.id)", coverArtFilePath: $0.coverArtFilePath) }
+        case .artists:
+            cachedFlipItems = artistItems.map { FlipItem(id: "artist-\($0.name)", coverArtFilePath: $0.coverArtFilePath) }
+        case .playlists:
+            cachedFlipItems = playlists.map { FlipItem(id: "playlist-\($0.id)", coverArtFilePath: $0.coverArtFilePath) }
+        }
+    }
+
+    /// Debounce track loading so DB queries don't fire on every scroll frame
+    private func debouncedUpdate() {
+        updateTask?.cancel()
+        // Update colors immediately (cheap) but debounce track loading (expensive)
+        updateColorsForCenteredItem()
+        updateTask = Task {
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled else { return }
+            updateCenteredState()
+        }
+    }
+
+    private func updateColorsForCenteredItem() {
+        switch selectedCategory {
+        case .albums:
+            guard let album = centeredAlbum else { return }
+            updateColors(image: album.coverArtImage, cacheKey: album.spotifyId ?? "album-\(album.id)")
+        case .artists:
+            guard artistItems.indices.contains(centeredIndex) else { return }
+            let artistAlbums = albums.filter { $0.artist.localizedCaseInsensitiveCompare(artistItems[centeredIndex].name) == .orderedSame }
+            if let firstAlbum = artistAlbums.first {
+                updateColors(image: firstAlbum.coverArtImage, cacheKey: firstAlbum.spotifyId ?? "album-\(firstAlbum.id)")
+            }
+        case .playlists:
+            guard playlists.indices.contains(centeredIndex), let image = playlists[centeredIndex].coverArtImage else {
+                albumColors = .placeholder
+                return
+            }
+            updateColors(image: image, cacheKey: "playlist-\(playlists[centeredIndex].id)")
+        }
     }
 
     private func updateCenteredState() {
